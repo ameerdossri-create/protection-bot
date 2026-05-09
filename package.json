@@ -1,0 +1,15 @@
+{
+  "name": "protection-bot",
+  "version": "1.0.0",
+  "description": "Server protection bot with anti-spam, anti-link, and alt-detection.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.16.1",
+    "dotenv": "^16.4.5"
+  }
+}
