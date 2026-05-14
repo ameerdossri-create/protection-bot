@@ -62,11 +62,35 @@ function saveTimeouts() {
 
 const spamMap = new Map();
 
-// -- KEEP ALIVE SERVER --
-http.createServer((req, res) => {
-    res.write('Nero Invincible Protection Bot is Running!');
+// -- KEEP ALIVE SERVER (ROBUST) --
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.write(`
+        <body style="background: #1a1a1a; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+            <h1 style="color: #5865F2;">🛡️ NERO INVINCIBLE SYSTEM</h1>
+            <p>Status: <span style="color: #3ba55c;">ONLINE</span></p>
+            <p>Uptime: ${Math.floor(process.uptime() / 60)} minutes</p>
+            <p>Ping this URL every 5 mins to stay 24/7!</p>
+        </body>
+    `);
     res.end();
-}).listen(process.env.PORT || 3000);
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`🌐 Keep-alive server is listening on port ${PORT}`);
+});
+
+// -- SELF-PING LOGIC (FOR RENDER/HEROKU) --
+setInterval(() => {
+    // If you are using Render, add RENDER_EXTERNAL_URL to your environment variables
+    const url = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+    if (url.startsWith('http')) {
+        http.get(url).on('error', (err) => {
+            console.error('Self-ping failed:', err.message);
+        });
+    }
+}, 5 * 60 * 1000); // Ping every 5 minutes
 
 // -- FORBIDDEN WORDS --
 const FORBIDDEN_WORDS = [
@@ -90,9 +114,21 @@ const BULLY_WORDS = [
     'حمار', 'ورع', 'كلب', 'حيوان', 'صرصور', 'غبي', 'فاشل', 'ضعيف', 'فقير', 'شحات', 'دب', 'نوب', 'جاهل', 'تافه', 'معفن', 'نجس', 'حشرة', 'زق', 'يا غبي', 'يا فاشل', 'يا لوح', 'يا ثور', 'يا بقرة', 'يا تيس', 'يا عنزة', 'يا خنزير', 'يا قرد', 'يا جحش', 'يا كر', 'يا صخل', 'يا دجاجة', 'يا فار', 'يا ارنب', 'يا خواف', 'يا جبان', 'يا رعديد', 'يا حثالة', 'يا زبالة', 'يا مهان', 'يا ذليل', 'يا وضيع', 'يا منحط', 'يا متخلف', 'يا معاق', 'يا مشلول', 'يا اعمى', 'يا اطرش', 'يا ابكم'
 ];
 
-// -- ERROR HANDLING --
-process.on('unhandledRejection', e => console.error('CRITICAL ERROR (Promise):', e));
-process.on('uncaughtException', e => console.error('CRITICAL ERROR (Crash):', e));
+// -- ERROR HANDLING & AUTO-RESTART --
+process.on('unhandledRejection', e => {
+    console.error('CRITICAL ERROR (Promise):', e);
+    // Don't kill the process, just log it
+});
+process.on('uncaughtException', e => {
+    console.error('CRITICAL ERROR (Crash):', e);
+    // If it's a fatal error, we might want to exit and let PM2 or the host restart it
+    // but for now, we'll try to keep it alive
+});
+
+client.on(Events.Error, e => console.error('Discord Client Error:', e));
+client.on(Events.ShardDisconnect, () => console.warn('Bot disconnected from Discord... attempting to reconnect.'));
+client.on(Events.ShardReconnecting, () => console.log('Bot is reconnecting to Discord...'));
+client.on(Events.ShardResume, () => console.log('Bot connection resumed!'));
 
 client.on(Events.ClientReady, async (c) => {
     console.log(`🛡️ NERO INVINCIBLE SYSTEM ACTIVE: ${c.user.tag}`);
